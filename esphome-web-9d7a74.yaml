@@ -1,0 +1,45 @@
+esphome:
+  name: esphome-web-9d7a74
+  friendly_name: hobby-room-climate
+
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "YDTi41srVaQfEDYIrxK+V+heiTENNS1XgW0QrKxJBMU="
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esphome-Web-9D7A74"
+    password: "tF4COpUWRoU2"
+
+captive_portal:
+
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+
+sensor:
+  - platform: scd4x
+    co2:
+      name: "Hobby Room CO2"
+    temperature:
+      name: "Hobby Room Temperature"
+    humidity:
+      name: "Hobby Room Humidity"
+    update_interval: 5s
