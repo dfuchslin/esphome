@@ -2,11 +2,13 @@
 
 Collection of ESPHome devices
 
+
 ## Install
 
 ```
 brew install esphome
 ```
+
 
 ## Flashing:
 
