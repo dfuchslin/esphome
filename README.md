@@ -9,7 +9,6 @@ Collection of ESPHome devices
 brew install esphome
 ```
 
-
 ## Flashing:
 
 ```
