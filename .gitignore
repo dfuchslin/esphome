@@ -1,0 +1,12 @@
+.DS_Store
+.vscode
+.idea
+
+.esphome
+**/.pio/
+**/.vscode/
+**/.pioenvs/
+**/.piolibdeps/
+**/platformio.ini
+**/secrets.yaml
+.python-version
