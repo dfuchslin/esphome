@@ -1,13 +1,18 @@
 esphome:
   name: doorbell-chime-hallway
   friendly_name: doorbell-chime-hallway
+#  includes:
+#    - custom/chimes.h
 
 esp32:
   board: tinypico
   framework:
     type: arduino
+  flash_size: 4MB
+  partitions: /Users/david/code/personal/esphome/custom/huge_app.csv
 
 logger:
+  level: VERY_VERBOSE
 
 api:
   encryption:
@@ -31,9 +36,65 @@ i2s_audio:
   i2s_lrclk_pin: GPIO27
   i2s_bclk_pin: GPIO26
 
+
+external_components:
+  - source: github://jesserockz/esphome-components
+    components: [file]
+
+file:
+  - id: doorbell_wav
+    file: assets/doorbell.wav
+
 media_player:
   - platform: i2s_audio
     name: ESPHome I2S Media Player
     dac_type: external
-    i2s_dout_pin: GPIO25
-    mode: mono
+    i2s_dout_pin:
+      number: GPIO25
+      allow_other_uses: true
+    mode: stereo
+    on_play:
+      - logger.log: "Playback started!"
+    on_pause:
+      - logger.log: "Playback paused!"
+    on_idle:
+      - logger.log: "Playback finished!"
+
+speaker:
+  - platform: i2s_audio
+    id: i2s_speaker
+    dac_type: external
+    i2s_dout_pin:
+      number: GPIO25
+      allow_other_uses: true
+    channel: mono
+    sample_rate: 44100
+    bits_per_sample: 16bit
+
+button:
+  - platform: template
+    id: doorbell_button
+    name: "Doorbell"
+    icon: "mdi:doorbell"
+    on_press:
+      - lambda: |-
+          id(i2s_speaker).start();
+      - delay: 50ms
+      - lambda: |-
+          ESP_LOGD("AUDIO", "File size: %d", sizeof(id(doorbell_wav)));
+          id(i2s_speaker).set_volume(0.25);
+          id(i2s_speaker).play(id(doorbell_wav), sizeof(id(doorbell_wav)));
+
+#    on_press:
+#      then:
+#        - lambda: |-
+#            id(i2s_speaker).play(doorbell_wav, doorbell_wav_len);
+
+#
+#button:
+#  - platform: template
+#    name: "Play Doorbell"
+#    on_press:
+#      - media_player.play_media:
+#          media_content_id: "http://doorbell-chime-hallway.local:81/chimes/doorbell.wav"
+#          media_content_type: music
