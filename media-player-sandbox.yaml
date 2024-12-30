@@ -1,0 +1,143 @@
+esphome:
+  name: media-player-sandbox
+  friendly_name: media-player-sandbox
+#  includes:
+#    - custom/chimes.h
+#  platformio_options:
+#    board_build.partitions: huge_app.csv
+#  platformio_options:
+#    board_build.arduino.memory_type: qio_opi
+
+# https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
+psram:
+  mode: octal
+  speed: 80MHz
+
+esp32:
+#  board: esp32-s3-devkitc-1
+  board: seeed_xiao_esp32s3
+#  board: tinypico
+  framework:
+    type: esp-idf
+  flash_size: 8MB
+#  partitions: custom/default.csv
+
+logger:
+#  level: VERY_VERBOSE
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+
+web_server:
+  port: 80
+
+prometheus:
+
+external_components:
+  #-------------------------------------------
+  # COMPONENT AUDIO
+  #-------------------------------------------
+  #- source: github://pr#7672
+  - source:
+      type: git
+      url: https://github.com/kahrendt/esphome
+      ref: speaker-media-player-dev
+    components:
+      - audio
+      - speaker
+      - i2s_audio
+      - speaker
+    refresh: 0s
+
+
+#external_components:
+#  - source: github://jesserockz/esphome-components
+#    components: [file]
+
+#file:
+#  - id: doorbell_wav
+#    file: assets/doorbell.wav
+
+i2s_audio:
+  i2s_lrclk_pin: GPIO1 #GPIO27
+  i2s_bclk_pin: GPIO2  #GPIO26
+
+# use new speaker media player when it arrives
+# https://github.com/esphome/esphome/pull/7672
+speaker:
+  - platform: i2s_audio
+    id: i2s_speaker
+    dac_type: external
+    i2s_dout_pin:
+      number: GPIO3   #GPIO25
+#      allow_other_uses: true
+    channel: stereo
+    sample_rate: 44100
+    bits_per_sample: 16bit
+
+media_player:
+#  - platform: i2s_audio
+#    name: ESPHome I2S Media Player
+#    dac_type: external
+#    i2s_dout_pin:
+#      number: GPIO25
+#      allow_other_uses: true
+#    mode: stereo
+#    on_play:
+#      - logger.log: "Playback started!"
+#    on_pause:
+#      - logger.log: "Playback paused!"
+#    on_idle:
+#      - logger.log: "Playback finished!"
+  - platform: speaker
+    name: ESPHome I2S Media Player
+    id: speaker_media_player
+    speaker: i2s_speaker
+    sample_rate: 44100
+    files:
+      - id: doorbell_flac
+        file: assets/doorbell-2chan.flac
+
+
+
+button:
+  - platform: template
+    id: doorbell_button
+    name: Doorbell
+    icon: "mdi:bell"
+    on_press:
+      - speaker_media_player.play_local_media_file: doorbell_flac
+
+#      - lambda: |-
+#          id(i2s_speaker).start();
+#      - delay: 50ms
+#      - lambda: |-
+#          id(i2s_speaker).set_volume(0.50);
+#          id(i2s_speaker).play(doorbell_wav, doorbell_wav_len);
+
+#          ESP_LOGD("AUDIO", "File size: %d", sizeof(id(doorbell_1_wav)));
+#          id(i2s_speaker).play(id(doorbell_wav), sizeof(id(doorbell_wav)));
+
+#    on_press:
+#      then:
+#        - lambda: |-
+#            id(i2s_speaker).play(doorbell_wav, doorbell_wav_len);
+
+#
+#button:
+#  - platform: template
+#    name: "Play Doorbell"
+#    on_press:
+#      - media_player.play_media:
+#          media_content_id: "http://media-player-sandbox.local:81/chimes/doorbell.wav"
+#          media_content_type: music
