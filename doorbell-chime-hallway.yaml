@@ -5,7 +5,7 @@ esphome:
     priority: -100  # Lower priority ensures WiFi is ready
     then:
       - media_player.volume_set: 5%
-      - media_player.play_media: http://192.168.101.169:8000/sbb-1chan-44100.wav
+      - media_player.play_media: !lambda return id(startup_sound_url).state.c_str();
       - wait_until:
           condition:
             media_player.is_playing: i2s_media_player
@@ -59,10 +59,29 @@ media_player:
       number: GPIO25
     mode: stereo
 
+text:
+  - platform: template
+    name: "Startup Sound URL"
+    id: startup_sound_url
+    icon: mdi:link-variant
+    initial_value: "http://192.168.101.169:8000/sbb-1chan-44100.wav"
+    restore_value: true
+    optimistic: true
+    mode: text
+  - platform: template
+    name: "Doorbell Sound URL"
+    id: doorbell_sound_url
+    icon: mdi:link-variant
+    initial_value: "http://192.168.101.169:8000/doorbell-1chan-44100.wav"
+    restore_value: true
+    optimistic: true
+    mode: text
+
+
 button:
   - platform: template
     id: doorbell_button
     name: Doorbell
     icon: "mdi:bell"
     on_press:
-      - media_player.play_media: http://192.168.101.169:8000/doorbell-1chan-44100.wav
+      - media_player.play_media: !lambda return id(doorbell_sound_url).state.c_str();
