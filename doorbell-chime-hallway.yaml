@@ -1,6 +1,18 @@
 esphome:
   name: doorbell-chime-hallway
   friendly_name: doorbell-chime-hallway
+  on_boot:
+    priority: -100  # Lower priority ensures WiFi is ready
+    then:
+      - media_player.volume_set: 5%
+      - media_player.play_media: http://192.168.101.169:8000/sbb-1chan-44100.wav
+      - wait_until:
+          condition:
+            media_player.is_playing: i2s_media_player
+      - wait_until:
+          condition:
+           media_player.is_idle: i2s_media_player
+      - media_player.volume_set: 90%
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
@@ -53,5 +65,4 @@ button:
     name: Doorbell
     icon: "mdi:bell"
     on_press:
-      - media_player.volume_set: 50%
       - media_player.play_media: http://192.168.101.169:8000/doorbell-1chan-44100.wav

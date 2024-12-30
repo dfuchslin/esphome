@@ -1,5 +1,5 @@
 esphome:
-  name: esphome-web-9d7a74
+  name: hobby-room-climate
   friendly_name: hobby-room-climate
 
 esp32:
