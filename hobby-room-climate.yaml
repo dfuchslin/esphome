@@ -8,11 +8,9 @@ psram:
   speed: 80MHz
 
 esp32:
-  board: esp32-s3-devkitc-1
-#  board: seeed_xiao_esp32s3
+  board: seeed_xiao_esp32s3
   framework:
-    type: arduino
-#    type: esp-idf  # wifi connection problems with esp-idf :/
+    type: esp-idf
   flash_size: 8MB
 
 logger:
@@ -29,7 +27,7 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-#  power_save_mode: none
+  output_power: 8.5dB  #seeed_xiao_esp32s3 likes this setting, see https://github.com/espressif/arduino-esp32/issues/2144#issuecomment-2028949116
 
 web_server:
   port: 80
