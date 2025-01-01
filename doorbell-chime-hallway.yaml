@@ -1,18 +1,19 @@
 esphome:
   name: doorbell-chime-hallway
   friendly_name: doorbell-chime-hallway
-#  on_boot:
-#    priority: -100  # Lower priority ensures WiFi is ready
-#    then:
-#      - media_player.volume_set: 5%
-#      #- media_player.play_media: !lambda return id(startup_sound_url).state.c_str();
-#      - wait_until:
-#          condition:
-#            media_player.is_playing: i2s_media_player
-#      - wait_until:
-#          condition:
-#           media_player.is_idle: i2s_media_player
-#      - media_player.volume_set: 90%
+  on_boot:
+    priority: -100  # Lower priority ensures WiFi is ready
+    then:
+      - delay: 5s
+      - media_player.volume_set: 5%
+      - media_player.play_media: !lambda return id(startup_sound_url).state.c_str();
+      - wait_until:
+          condition:
+            media_player.is_playing: i2s_media_player
+      - wait_until:
+          condition:
+           media_player.is_idle: i2s_media_player
+      - media_player.volume_set: 90%
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
@@ -58,6 +59,7 @@ i2s_audio:
 media_player:
   - platform: i2s_audio
     id: i2s_media_player
+    name: Media Player
     dac_type: external
     i2s_dout_pin:
       number: GPIO25
