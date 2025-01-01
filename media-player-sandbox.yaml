@@ -19,7 +19,6 @@ esp32:
 #  board: tinypico
   framework:
     type: esp-idf
-  flash_size: 8MB
 #  partitions: custom/default.csv
 
 logger:
@@ -36,7 +35,9 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  output_power: 8.5dB  #seeed_xiao_esp32s3 likes this setting, see https://github.com/espressif/arduino-esp32/issues/2144#issuecomment-2028949116
+  power_save_mode: none
+  # esp32 needs the output_power setting, see https://github.com/espressif/arduino-esp32/issues/2144#issuecomment-20289491161
+  output_power: 8.5dB
 
 web_server:
   port: 80
