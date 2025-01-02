@@ -70,7 +70,7 @@ text:
     name: "Startup Sound URL"
     id: startup_sound_url
     icon: mdi:link-variant
-    initial_value: "http://192.168.101.169:8000/sbb-1chan-44100.wav"
+    initial_value: "http://intercom.local/sbb-1chan-44100.wav"
     restore_value: true
     optimistic: true
     mode: text
@@ -78,7 +78,7 @@ text:
     name: "Doorbell Sound URL"
     id: doorbell_sound_url
     icon: mdi:link-variant
-    initial_value: "http://192.168.101.169:8000/doorbell-1chan-44100.wav"
+    initial_value: "http://intercom.local/doorbell-1chan-44100.wav"
     restore_value: true
     optimistic: true
     mode: text
