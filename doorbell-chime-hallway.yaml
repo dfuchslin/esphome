@@ -4,7 +4,7 @@ esphome:
   on_boot:
     priority: -100  # Lower priority ensures WiFi is ready
     then:
-      - delay: 5s
+      - delay: 3s
       - media_player.volume_set: 5%
       - media_player.play_media: !lambda return id(startup_sound_url).state.c_str();
       - wait_until:
@@ -63,14 +63,13 @@ media_player:
     dac_type: external
     i2s_dout_pin:
       number: GPIO25
-    mode: stereo
 
 text:
   - platform: template
     name: "Startup Sound URL"
     id: startup_sound_url
     icon: mdi:link-variant
-    initial_value: "http://intercom.local/sbb-1chan-44100.wav"
+    initial_value: "http://intercom.local/static/sbb-1chan-44100.wav"
     restore_value: true
     optimistic: true
     mode: text
@@ -78,7 +77,7 @@ text:
     name: "Doorbell Sound URL"
     id: doorbell_sound_url
     icon: mdi:link-variant
-    initial_value: "http://intercom.local/doorbell-1chan-44100.wav"
+    initial_value: "http://intercom.local/static/doorbell-1chan-44100.wav"
     restore_value: true
     optimistic: true
     mode: text
