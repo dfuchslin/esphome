@@ -69,16 +69,16 @@ text:
     name: "Startup Sound URL"
     id: startup_sound_url
     icon: mdi:link-variant
-    initial_value: "http://intercom.local/static/sbb-1chan-44100.wav"
-    restore_value: true
+    initial_value: "http://intercom-iot.local/static/sbb-1chan-44100.wav"
+    restore_value: false
     optimistic: true
     mode: text
   - platform: template
     name: "Doorbell Sound URL"
     id: doorbell_sound_url
     icon: mdi:link-variant
-    initial_value: "http://intercom.local/static/doorbell-1chan-44100.wav"
-    restore_value: true
+    initial_value: "http://intercom-iot.local/static/doorbell-1chan-44100.wav"
+    restore_value: false
     optimistic: true
     mode: text
 
