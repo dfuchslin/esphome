@@ -44,6 +44,10 @@ sensor:
   - platform: scd4x
     co2:
       name: "Bedroom CO2"
+      filters:
+        - exponential_moving_average:
+            alpha: 0.1
+            send_every: 15
     temperature:
       name: "Bedroom Temperature"
     humidity:
