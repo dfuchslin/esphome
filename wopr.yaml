@@ -1,0 +1,120 @@
+# thank you https://www.printables.com/model/1167457-1u-rack-mount-wopr-leds-enclosure
+
+esphome:
+  name: wopr
+  friendly_name: WOPR Display
+
+# https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
+psram:
+  mode: octal
+  speed: 80MHz
+
+esp32:
+  board: seeed_xiao_esp32s3
+  framework:
+    type: esp-idf
+
+logger:
+  level: WARN
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  output_power: 8.5dB
+
+web_server:
+  port: 80
+
+prometheus:
+
+status_led:
+  pin:
+    number: GPIO21  # LED_BUILTIN
+    inverted: true
+
+spi:
+  clk_pin: GPIO2
+  mosi_pin: GPIO3
+
+display:
+  - platform: max7219digit
+    id: max7219_display
+    data_rate: 10MHz
+    cs_pin: GPIO4
+    num_chips: 12
+    intensity: 0
+    update_interval: 100ms
+    lambda: |-
+      static uint32_t last_update = 0;
+      static uint32_t next_update_interval = 0;
+      static bool first_run = true;
+
+      static uint8_t buffer[96] = {0};  // 12 chips * 8 columns
+
+      if (first_run) {
+        ESP_LOGI("WOPR", "Initializing WOPR display pattern generator");
+        last_update = 0;
+        next_update_interval = 0;
+        memset(buffer, 0, sizeof(buffer));
+        first_run = false;
+      }
+
+      uint32_t now = millis();
+
+      if (now - last_update > next_update_interval) {
+        ESP_LOGD("WOPR", "Updating display pattern after %u ms", next_update_interval);
+
+        // Randomly set pixels in our buffer
+        ESP_LOGD("WOPR", "Generating random pixel pattern");
+        int changed_pixels = 0;
+        int on_pixels = 0;
+        for (int y = 0; y < 8; y++) {
+          if (((double) random()/RAND_MAX) < 0.5) {  // 50% chance to change a row
+            for (int x = 0; x < 96; x++) {
+              if (((double) random()/RAND_MAX) < 0.5) {  // 50% chance to change a pixel
+                changed_pixels++;
+                if (((double) random()/RAND_MAX) < 0.5) {
+                  buffer[x] |= (1 << y);  // Set bit
+                  on_pixels++;
+                } else {
+                  buffer[x] &= ~(1 << y);  // Clear bit
+                }
+              }
+            }
+          }
+        }
+        ESP_LOGD("WOPR", "Changed %d pixels, %d turned on", changed_pixels, on_pixels);
+
+        double time_choice = ((double) random()/RAND_MAX);
+        if (time_choice < 0.25) {
+          next_update_interval = 200;
+        } else if (time_choice < 0.5) {
+          next_update_interval = 600;
+        } else if (time_choice < 0.75) {
+          next_update_interval = 1000;
+        } else {
+          next_update_interval = 1200;
+        }
+        ESP_LOGD("WOPR", "Next update in %u ms", next_update_interval);
+
+        last_update = now;
+      }
+
+      for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 96; x++) {
+          if (buffer[x] & (1 << y)) {
+            id(max7219_display).draw_pixel_at(x, y, COLOR_ON);
+          }
+        }
+      }
+
+      id(max7219_display).display();
