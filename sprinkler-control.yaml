@@ -1,0 +1,109 @@
+esphome:
+  name: sprinkler-control
+  friendly_name: sprinkler-control
+
+esp8266:
+  board: nodemcuv2
+  framework:
+    version: recommended
+
+logger:
+#  level: VERY_VERBOSE
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  # esp32 needs the output_power setting, see https://github.com/espressif/arduino-esp32/issues/2144#issuecomment-2028949116
+  output_power: 8.5dB
+
+web_server:
+  port: 80
+
+prometheus:
+
+switch:
+  # relay 0
+  - platform: gpio
+    pin: D7
+    inverted: true
+    id: valve_main
+    name: "Main"
+
+  # relay 1
+  - platform: gpio
+    pin: D6
+    inverted: true
+    id: valve_1
+    name: "Valve 1"
+    internal: true
+
+  # relay 2
+  - platform: gpio
+    pin: D5
+    inverted: true
+    id: valve_2
+    name: "Valve 2"
+    internal: true
+
+  # relay 3
+  - platform: gpio
+    pin: GPIO9
+    inverted: true
+    id: valve_3
+    name: "Valve 3"
+    internal: true
+
+  # relay 4
+  - platform: gpio
+    pin: GPIO10
+    inverted: true
+    id: valve_4
+    name: "Valve 4"
+    internal: true
+
+  # relay 5
+  - platform: gpio
+    pin: D2
+    inverted: true
+    id: valve_5
+    name: "Valve 5"
+    internal: true
+
+  # relay 6
+  - platform: gpio
+    pin: D1
+    inverted: true
+    id: valve_6
+    name: "Valve 6"
+    internal: true
+
+  # relay 7
+  - platform: gpio
+    pin: D0
+    inverted: true
+    id: valve_7
+    name: "Valve 7"
+    internal: true
+
+sprinkler:
+  - id: sprinkler_controller_1
+    valves:
+      - valve_switch: "Valve 1"
+        run_duration: 1800s
+        valve_switch_id: valve_1
+        pump_switch_id: valve_main
+  - id: sprinkler_controller_2
+    valves:
+      - valve_switch: "Valve 2"
+        run_duration: 1800s
+        valve_switch_id: valve_2
+        pump_switch_id: valve_main
