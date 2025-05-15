@@ -50,12 +50,12 @@ switch:
       then:
         - switch.turn_off: switch_valve_hedge
         - switch.turn_off: switch_valve_gazebo
-        - switch.turn_off: switch_valve_greenhouse
+        - switch.turn_off: switch_valve_gravel_garden
 
   - platform: gpio
     id: switch_valve_hedge
     name: "Hedge"
-    icon: "mdi:water"
+    icon: "mdi:sprinkler"
     pin: D6
     inverted: true
     on_turn_on:
@@ -67,14 +67,14 @@ switch:
             condition:
               and:
                 - switch.is_off: switch_valve_gazebo
-                - switch.is_off: switch_valve_greenhouse
+                - switch.is_off: switch_valve_gravel_garden
             then:
               - switch.turn_off: switch_valve_main
 
   - platform: gpio
     id: switch_valve_gazebo
     name: "Gazebo"
-    icon: "mdi:water"
+    icon: "mdi:sprinkler"
     pin: D5
     inverted: true
     on_turn_on:
@@ -86,14 +86,14 @@ switch:
             condition:
               and:
                 - switch.is_off: switch_valve_hedge
-                - switch.is_off: switch_valve_greenhouse
+                - switch.is_off: switch_valve_gravel_garden
             then:
               - switch.turn_off: switch_valve_main
 
   - platform: gpio
-    id: switch_valve_greenhouse
-    name: "Greenhouse"
-    icon: "mdi:water"
+    id: switch_valve_gravel_garden
+    name: "Gravel Garden"
+    icon: "mdi:sprinkler"
     pin: GPIO9
     inverted: true
     on_turn_on:
