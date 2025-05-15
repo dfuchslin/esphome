@@ -30,80 +30,33 @@ web_server:
 
 prometheus:
 
+# relay 0 (main)  D7
+# relay 1         D6
+# relay 2         D5
+# relay 3         GPIO9
+# relay 4         GPIO10
+# relay 5         D2
+# relay 6         D1
+# relay 7         D0
+
 switch:
-  # relay 0
   - platform: gpio
+    id: switch_valve_main
+    name: "Main"
+    icon: "mdi:valve"
     pin: D7
     inverted: true
-    id: valve_main
-    name: "Main"
 
-  # relay 1
   - platform: gpio
+    id: switch_valve_hedge
+    name: "Hedge"
+    icon: "mdi:water"
     pin: D6
     inverted: true
-    id: valve_1
-    name: "Valve 1"
-    internal: true
 
-  # relay 2
   - platform: gpio
+    id: switch_valve_gazebo
+    name: "Gazebo"
+    icon: "mdi:water"
     pin: D5
     inverted: true
-    id: valve_2
-    name: "Valve 2"
-    internal: true
-
-  # relay 3
-  - platform: gpio
-    pin: GPIO9
-    inverted: true
-    id: valve_3
-    name: "Valve 3"
-    internal: true
-
-  # relay 4
-  - platform: gpio
-    pin: GPIO10
-    inverted: true
-    id: valve_4
-    name: "Valve 4"
-    internal: true
-
-  # relay 5
-  - platform: gpio
-    pin: D2
-    inverted: true
-    id: valve_5
-    name: "Valve 5"
-    internal: true
-
-  # relay 6
-  - platform: gpio
-    pin: D1
-    inverted: true
-    id: valve_6
-    name: "Valve 6"
-    internal: true
-
-  # relay 7
-  - platform: gpio
-    pin: D0
-    inverted: true
-    id: valve_7
-    name: "Valve 7"
-    internal: true
-
-sprinkler:
-  - id: sprinkler_controller_1
-    valves:
-      - valve_switch: "Valve 1"
-        run_duration: 1800s
-        valve_switch_id: valve_1
-        pump_switch_id: valve_main
-  - id: sprinkler_controller_2
-    valves:
-      - valve_switch: "Valve 2"
-        run_duration: 1800s
-        valve_switch_id: valve_2
-        pump_switch_id: valve_main
