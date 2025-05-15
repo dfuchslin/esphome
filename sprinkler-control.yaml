@@ -46,6 +46,11 @@ switch:
     icon: "mdi:valve"
     pin: D7
     inverted: true
+    on_turn_off:
+      then:
+        - switch.turn_off: switch_valve_hedge
+        - switch.turn_off: switch_valve_gazebo
+        - switch.turn_off: switch_valve_greenhouse
 
   - platform: gpio
     id: switch_valve_hedge
@@ -53,6 +58,18 @@ switch:
     icon: "mdi:water"
     pin: D6
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: switch_valve_main
+    on_turn_off:
+      then:
+        - if:
+            condition:
+              and:
+                - switch.is_off: switch_valve_gazebo
+                - switch.is_off: switch_valve_greenhouse
+            then:
+              - switch.turn_off: switch_valve_main
 
   - platform: gpio
     id: switch_valve_gazebo
@@ -60,3 +77,34 @@ switch:
     icon: "mdi:water"
     pin: D5
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: switch_valve_main
+    on_turn_off:
+      then:
+        - if:
+            condition:
+              and:
+                - switch.is_off: switch_valve_hedge
+                - switch.is_off: switch_valve_greenhouse
+            then:
+              - switch.turn_off: switch_valve_main
+
+  - platform: gpio
+    id: switch_valve_greenhouse
+    name: "Greenhouse"
+    icon: "mdi:water"
+    pin: GPIO9
+    inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: switch_valve_main
+    on_turn_off:
+      then:
+        - if:
+            condition:
+              and:
+                - switch.is_off: switch_valve_hedge
+                - switch.is_off: switch_valve_gazebo
+            then:
+              - switch.turn_off: switch_valve_main
