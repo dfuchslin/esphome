@@ -10,17 +10,17 @@
 # relay 7         D0
 
 substitutions:
-  zone_master_name: Main
-  zone_master_gpio: D7
-  zone_1_name: Hedge
-  zone_1_gpio: GPIO9
-  zone_1_duration: 15s
-  zone_2_name: Gazebo
-  zone_2_gpio: D5
-  zone_2_duration: 15s
-  zone_3_name: Gravel Garden
-  zone_3_gpio: D6
-  zone_3_duration: 15s
+  zone_master_name: "Main"
+  zone_master_gpio: "D7"
+  zone_1_name: "Hedge"
+  zone_1_gpio: "GPIO9"
+  zone_1_duration: "90"
+  zone_2_name: "Gazebo"
+  zone_2_gpio: "D5"
+  zone_2_duration: "30"
+  zone_3_name: "Gravel Garden"
+  zone_3_gpio: "D6"
+  zone_3_duration: "30"
 
 esphome:
   name: sprinkler-control
@@ -116,13 +116,13 @@ sprinkler:
     valve_open_delay: 2s
     valves:
       - valve_switch: $zone_1_name
-        run_duration: $zone_1_duration
+        run_duration: "${zone_1_duration}s"
         valve_switch_id: switch_valve_zone_1
       - valve_switch: $zone_2_name
-        run_duration: $zone_2_duration
+        run_duration: "${zone_2_duration}s"
         valve_switch_id: switch_valve_zone_2
       - valve_switch: $zone_3_name
-        run_duration: $zone_3_duration
+        run_duration: "${zone_3_duration}s"
         valve_switch_id: switch_valve_zone_3
 
 number:
@@ -130,7 +130,7 @@ number:
     id: num_switch_valve_zone_1
     name: "$zone_1_name duration"
     min_value: 1
-    max_value: 60
+    max_value: 120
     step: 1
     unit_of_measurement: Min
     icon: "mdi:timer-outline"
@@ -145,7 +145,7 @@ number:
     id: num_switch_valve_zone_2
     name: "$zone_2_name duration"
     min_value: 1
-    max_value: 60
+    max_value: 120
     step: 1
     unit_of_measurement: Min
     icon: "mdi:timer-outline"
@@ -160,7 +160,7 @@ number:
     id: num_switch_valve_zone_3
     name: "$zone_3_name duration"
     min_value: 1
-    max_value: 60
+    max_value: 120
     step: 1
     unit_of_measurement: Min
     icon: "mdi:timer-outline"
