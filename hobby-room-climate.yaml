@@ -41,6 +41,13 @@ i2c:
   scan: true
 
 sensor:
+  - platform: uptime
+    name: Uptime
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+
   - platform: scd4x
     co2:
       name: "Hobby Room CO2"

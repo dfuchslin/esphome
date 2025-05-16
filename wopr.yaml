@@ -36,6 +36,14 @@ web_server:
 
 prometheus:
 
+sensor:
+  - platform: uptime
+    name: Uptime
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+
 status_led:
   pin:
     number: GPIO21  # LED_BUILTIN

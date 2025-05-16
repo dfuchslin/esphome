@@ -44,26 +44,34 @@ web_server:
 
 prometheus:
 
+sensor:
+  - platform: uptime
+    name: Uptime
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+
 status_led:
   pin:
     number: GPIO21  #LED_BUILTIN
     inverted: true
 
-external_components:
-  #-------------------------------------------
-  # COMPONENT AUDIO
-  #-------------------------------------------
-  #- source: github://pr#7672
-  - source:
-      type: git
-      url: https://github.com/kahrendt/esphome
-      ref: speaker-media-player-dev
-    components:
-      - audio
-      - speaker
-      - i2s_audio
-      - speaker
-    refresh: 0s
+#external_components:
+#  #-------------------------------------------
+#  # COMPONENT AUDIO
+#  #-------------------------------------------
+#  #- source: github://pr#7672
+#  - source:
+#      type: git
+#      url: https://github.com/kahrendt/esphome
+#      ref: speaker-media-player-dev
+#    components:
+#      - audio
+#      - speaker
+#      - i2s_audio
+#      - speaker
+#    refresh: 0s
 
 
 #external_components:
@@ -74,24 +82,24 @@ external_components:
 #  - id: doorbell_wav
 #    file: assets/doorbell.wav
 
-i2s_audio:
-  i2s_lrclk_pin: GPIO5
-  i2s_bclk_pin: GPIO4
+#i2s_audio:
+#  i2s_lrclk_pin: GPIO5
+#  i2s_bclk_pin: GPIO4
 
 # use new speaker media player when it arrives
 # https://github.com/esphome/esphome/pull/7672
-speaker:
-  - platform: i2s_audio
-    id: i2s_speaker
-    dac_type: external
-    i2s_dout_pin:
-      number: GPIO3
-#      allow_other_uses: true
-    channel: stereo
-    sample_rate: 44100
-    bits_per_sample: 16bit
+#speaker:
+#  - platform: i2s_audio
+#    id: i2s_speaker
+#    dac_type: external
+#    i2s_dout_pin:
+#      number: GPIO3
+##      allow_other_uses: true
+#    channel: stereo
+#    sample_rate: 44100
+#    bits_per_sample: 16bit
 
-media_player:
+#media_player:
 #  - platform: i2s_audio
 #    name: ESPHome I2S Media Player
 #    dac_type: external
@@ -105,24 +113,24 @@ media_player:
 #      - logger.log: "Playback paused!"
 #    on_idle:
 #      - logger.log: "Playback finished!"
-  - platform: speaker
-    name: ESPHome I2S Media Player
-    id: speaker_media_player
-    speaker: i2s_speaker
-    sample_rate: 44100
-    files:
-      - id: doorbell_flac
-        file: assets/doorbell-1chan.flac
+#  - platform: speaker
+#    name: ESPHome I2S Media Player
+#    id: speaker_media_player
+#    speaker: i2s_speaker
+#    sample_rate: 44100
+#    files:
+#      - id: doorbell_flac
+#        file: assets/doorbell-1chan.flac
 
 
-
-button:
-  - platform: template
-    id: doorbell_button
-    name: Doorbell
-    icon: "mdi:bell"
-    on_press:
-      - speaker_media_player.play_local_media_file: doorbell_flac
+#
+#button:
+#  - platform: template
+#    id: doorbell_button
+#    name: Doorbell
+#    icon: "mdi:bell"
+#    on_press:
+#      - speaker_media_player.play_local_media_file: doorbell_flac
 
 #      - lambda: |-
 #          id(i2s_speaker).start();
@@ -140,10 +148,101 @@ button:
 #            id(i2s_speaker).play(doorbell_wav, doorbell_wav_len);
 
 #
-#button:
-#  - platform: template
-#    name: "Play Doorbell"
-#    on_press:
-#      - media_player.play_media:
-#          media_content_id: "http://media-player-sandbox.local:81/chimes/doorbell.wav"
-#          media_content_type: music
+button:
+  - platform: template
+    name: "Play Doorbell"
+    on_press:
+      - mixer_speaker.apply_ducking:
+          id: media_spk_mixer_input
+          decibel_reduction: 20
+          duration: 0.0s
+      - media_player.speaker.play_on_device_media_file:
+          media_file: alarm_sound
+          announcement: true
+      # Wait until the alarm sound starts playing
+      - wait_until:
+          media_player.is_announcing:
+      # Wait until the alarm sound stops playing
+      - wait_until:
+          not:
+            media_player.is_announcing:
+      - media_player.stop:
+          announcement: true
+      - mixer_speaker.apply_ducking: # Stop ducking the media stream over 2 seconds
+          id: media_spk_mixer_input
+          decibel_reduction: 0
+          duration: 2.0s
+
+# wow this is freaking awesome! https://github.com/esphome/esphome-docs/pull/4630/files
+
+i2s_audio:
+  i2s_lrclk_pin: GPIO6
+  i2s_bclk_pin: GPIO5
+
+speaker:
+  - platform: i2s_audio
+    id: speaker_id
+    dac_type: external
+    i2s_dout_pin: GPIO4
+    sample_rate: 48000
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: speaker_id
+    source_speakers:
+      - id: announcement_spk_mixer_input
+      - id: media_spk_mixer_input
+  - platform: resampler
+    id: media_spk_resampling_input
+    output_speaker: media_spk_mixer_input
+  - platform: resampler
+    id: announcement_spk_resampling_input
+    output_speaker: announcement_spk_mixer_input
+
+media_player:
+  - platform: speaker
+    name: "Speaker Media Player"
+    id: speaker_media_player_id
+    media_pipeline:
+      speaker: media_spk_resampling_input
+      num_channels: 2
+    announcement_pipeline:
+      speaker: announcement_spk_resampling_input
+      num_channels: 1
+    files:
+      - id: alarm_sound
+        file: assets/doorbell-1chan-48000.flac # Placed in the yaml directory. Should be encoded with a 48000 Hz sample rate, mono or stereo audio, and 16 bits per sample.
+switch:
+  - platform: template
+    name: "Ring Timer"
+    id: timer_ringing
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_off:
+      # Stop playing the alarm
+      - media_player.stop:
+          announcement: true
+      - mixer_speaker.apply_ducking:  # Stop ducking the media stream over 2 seconds
+          id: media_spk_mixer_input
+          decibel_reduction: 0
+          duration: 2.0s
+    on_turn_on:
+      # Duck media audio by 20 decibels instantly
+      - mixer_speaker.apply_ducking:
+          id: media_spk_mixer_input
+          decibel_reduction: 20
+          duration: 0.0s
+      - while:
+          condition:
+            switch.is_on: timer_ringing
+          then:
+            # Play the alarm sound as an announcement
+            - media_player.speaker.play_on_device_media_file:
+                media_file: alarm_sound
+                announcement: true
+            # Wait until the alarm sound starts playing
+            - wait_until:
+                media_player.is_announcing:
+            # Wait until the alarm sound stops playing
+            - wait_until:
+                not:
+                  media_player.is_announcing:

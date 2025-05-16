@@ -48,6 +48,14 @@ web_server:
 
 prometheus:
 
+sensor:
+  - platform: uptime
+    name: Uptime
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+
 #status_led:
 # https://help.unexpectedmaker.com/index.php/knowledge-base/esphome-with-tinypico-apa-rgb-led/
 # cool idea for the rgb led: https://github.com/esphome/esphome/pull/5814:
