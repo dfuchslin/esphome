@@ -39,6 +39,7 @@ esp8266:
   board: nodemcuv2
   framework:
     version: recommended
+  early_pin_init: false
 
 logger:
 #  level: VERY_VERBOSE
@@ -113,7 +114,7 @@ sprinkler:
       name: "Main"
       id: switch_valve_main_sprinkler
     auto_advance_switch: "Auto Advance"
-    valve_open_delay: 2s
+    valve_open_delay: 1s
     valves:
       - valve_switch: $zone_1_name
         run_duration: "${zone_1_duration}s"
