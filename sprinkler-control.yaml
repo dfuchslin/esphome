@@ -94,7 +94,7 @@ switch:
     id: switch_valve_gravel_garden
     name: "Gravel Garden"
     icon: "mdi:sprinkler"
-    pin: GPIO9
+    pin: D6
     inverted: true
     on_turn_on:
       then:
