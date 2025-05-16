@@ -31,12 +31,12 @@ web_server:
 prometheus:
 
 # relay 0 (main)  D7
-# relay 1         D6
-# relay 2         D5
-# relay 3         GPIO9
-# relay 4         GPIO10
+# relay 1         D6      (greenhouse/gravel garden)
+# relay 2         D5      (greenhouse/gravel garden)
+# relay 3         GPIO9   (hedge/rose garden)
+# relay 4         GPIO10  (hedge/rose garden)
 # relay 5         D2
-# relay 6         D1
+# relay 6         D1      (front altan)
 # relay 7         D0
 
 switch:
@@ -56,7 +56,7 @@ switch:
     id: switch_valve_hedge
     name: "Hedge"
     icon: "mdi:sprinkler"
-    pin: D6
+    pin: GPIO9
     inverted: true
     on_turn_on:
       then:
