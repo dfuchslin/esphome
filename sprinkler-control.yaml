@@ -119,12 +119,15 @@ sprinkler:
       - valve_switch: $zone_1_name
         run_duration: "${zone_1_duration}s"
         valve_switch_id: switch_valve_zone_1
+        pump_switch_id: switch_valve_main
       - valve_switch: $zone_2_name
         run_duration: "${zone_2_duration}s"
         valve_switch_id: switch_valve_zone_2
+        pump_switch_id: switch_valve_main
       - valve_switch: $zone_3_name
         run_duration: "${zone_3_duration}s"
         valve_switch_id: switch_valve_zone_3
+        pump_switch_id: switch_valve_main
 
 number:
   - platform: template
