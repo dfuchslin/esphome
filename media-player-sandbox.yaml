@@ -1,12 +1,22 @@
 esphome:
   name: media-player-sandbox
   friendly_name: media-player-sandbox
-#  includes:
-#    - custom/chimes.h
-#  platformio_options:
-#    board_build.partitions: huge_app.csv
-#  platformio_options:
-#    board_build.arduino.memory_type: qio_opi
+  on_boot:
+    priority: -100  # Lower priority ensures WiFi is ready
+    then:
+      - delay: 3s
+      - media_player.volume_set: 50%
+      - media_player.speaker.play_on_device_media_file:
+          media_file: chime_sound
+          announcement: true
+      - wait_until:
+          media_player.is_announcing:
+      - wait_until:
+          not:
+            media_player.is_announcing:
+      - media_player.stop:
+          announcement: true
+      - media_player.volume_set: 90%
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
@@ -157,7 +167,7 @@ button:
           decibel_reduction: 20
           duration: 0.0s
       - media_player.speaker.play_on_device_media_file:
-          media_file: alarm_sound
+          media_file: doorbell_sound
           announcement: true
       # Wait until the alarm sound starts playing
       - wait_until:
@@ -184,7 +194,7 @@ speaker:
     id: speaker_id
     dac_type: external
     i2s_dout_pin: GPIO4
-    sample_rate: 48000
+    sample_rate: 44100
   - platform: mixer
     id: mixer_speaker_id
     output_speaker: speaker_id
@@ -208,41 +218,44 @@ media_player:
     announcement_pipeline:
       speaker: announcement_spk_resampling_input
       num_channels: 1
+    # Placed in the assets dir. Should be encoded with a 44100 Hz sample rate, mono or stereo audio, and 16 bits per sample.
     files:
-      - id: alarm_sound
-        file: assets/doorbell-1chan-48000.flac # Placed in the yaml directory. Should be encoded with a 48000 Hz sample rate, mono or stereo audio, and 16 bits per sample.
-switch:
-  - platform: template
-    name: "Ring Timer"
-    id: timer_ringing
-    optimistic: true
-    restore_mode: ALWAYS_OFF
-    on_turn_off:
-      # Stop playing the alarm
-      - media_player.stop:
-          announcement: true
-      - mixer_speaker.apply_ducking:  # Stop ducking the media stream over 2 seconds
-          id: media_spk_mixer_input
-          decibel_reduction: 0
-          duration: 2.0s
-    on_turn_on:
-      # Duck media audio by 20 decibels instantly
-      - mixer_speaker.apply_ducking:
-          id: media_spk_mixer_input
-          decibel_reduction: 20
-          duration: 0.0s
-      - while:
-          condition:
-            switch.is_on: timer_ringing
-          then:
-            # Play the alarm sound as an announcement
-            - media_player.speaker.play_on_device_media_file:
-                media_file: alarm_sound
-                announcement: true
-            # Wait until the alarm sound starts playing
-            - wait_until:
-                media_player.is_announcing:
-            # Wait until the alarm sound stops playing
-            - wait_until:
-                not:
-                  media_player.is_announcing:
+      - id: doorbell_sound
+        file: assets/doorbell-1chan-44100.flac
+      - id: chime_sound
+        file: assets/sbb-1chan-44100.flac
+#switch:
+#  - platform: template
+#    name: "Ring Timer"
+#    id: timer_ringing
+#    optimistic: true
+#    restore_mode: ALWAYS_OFF
+#    on_turn_off:
+#      # Stop playing the alarm
+#      - media_player.stop:
+#          announcement: true
+#      - mixer_speaker.apply_ducking:  # Stop ducking the media stream over 2 seconds
+#          id: media_spk_mixer_input
+#          decibel_reduction: 0
+#          duration: 2.0s
+#    on_turn_on:
+#      # Duck media audio by 20 decibels instantly
+#      - mixer_speaker.apply_ducking:
+#          id: media_spk_mixer_input
+#          decibel_reduction: 20
+#          duration: 0.0s
+#      - while:
+#          condition:
+#            switch.is_on: timer_ringing
+#          then:
+#            # Play the alarm sound as an announcement
+#            - media_player.speaker.play_on_device_media_file:
+#                media_file: doorbell_sound
+#                announcement: true
+#            # Wait until the alarm sound starts playing
+#            - wait_until:
+#                media_player.is_announcing:
+#            # Wait until the alarm sound stops playing
+#            - wait_until:
+#                not:
+#                  media_player.is_announcing:

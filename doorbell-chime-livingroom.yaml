@@ -5,14 +5,17 @@ esphome:
     priority: -100  # Lower priority ensures WiFi is ready
     then:
       - delay: 3s
-      - media_player.volume_set: 5%
-      - media_player.play_media: !lambda return id(startup_sound_url).state.c_str();
+      - media_player.volume_set: 10%
+      - media_player.speaker.play_on_device_media_file:
+          media_file: chime_sound
+          announcement: true
       - wait_until:
-          condition:
-            media_player.is_playing: i2s_media_player
+          media_player.is_announcing:
       - wait_until:
-          condition:
-           media_player.is_idle: i2s_media_player
+          not:
+            media_player.is_announcing:
+      - media_player.stop:
+          announcement: true
       - media_player.volume_set: 90%
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
@@ -23,7 +26,7 @@ esphome:
 esp32:
   board: tinypico
   framework:
-    type: arduino
+    type: esp-idf
 
 logger:
 #  level: VERY_VERBOSE
@@ -64,32 +67,41 @@ i2s_audio:
   i2s_lrclk_pin: GPIO27
   i2s_bclk_pin: GPIO26
 
-media_player:
+speaker:
   - platform: i2s_audio
-    id: i2s_media_player
-    name: Media Player
+    id: speaker_id
     dac_type: external
-    i2s_dout_pin:
-      number: GPIO25
+    i2s_dout_pin: GPIO25
+    sample_rate: 48000
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: speaker_id
+    source_speakers:
+      - id: announcement_spk_mixer_input
+      - id: media_spk_mixer_input
+  - platform: resampler
+    id: media_spk_resampling_input
+    output_speaker: media_spk_mixer_input
+  - platform: resampler
+    id: announcement_spk_resampling_input
+    output_speaker: announcement_spk_mixer_input
 
-text:
-  - platform: template
-    name: "Startup Sound URL"
-    id: startup_sound_url
-    icon: mdi:link-variant
-    initial_value: "http://intercom-iot.local/static/sbb-1chan-44100.wav"
-    restore_value: false
-    optimistic: true
-    mode: text
-  - platform: template
-    name: "Doorbell Sound URL"
-    id: doorbell_sound_url
-    icon: mdi:link-variant
-    initial_value: "http://intercom-iot.local/static/doorbell-1chan-44100.wav"
-    restore_value: false
-    optimistic: true
-    mode: text
-
+media_player:
+  - platform: speaker
+    name: "Speaker Media Player"
+    id: speaker_media_player_id
+    media_pipeline:
+      speaker: media_spk_resampling_input
+      num_channels: 2
+    announcement_pipeline:
+      speaker: announcement_spk_resampling_input
+      num_channels: 1
+    # Placed in the assets dir. Should be encoded with a 48000 Hz sample rate, mono or stereo audio, and 16 bits per sample.
+    files:
+      - id: doorbell_sound
+        file: assets/doorbell-1chan-48000.flac
+      - id: chime_sound
+        file: assets/sbb-1chan-48000.flac
 
 button:
   - platform: template
@@ -97,4 +109,21 @@ button:
     name: Doorbell
     icon: "mdi:bell"
     on_press:
-      - media_player.play_media: !lambda return id(doorbell_sound_url).state.c_str();
+      - mixer_speaker.apply_ducking:
+          id: media_spk_mixer_input
+          decibel_reduction: 20
+          duration: 0.0s
+      - media_player.speaker.play_on_device_media_file:
+          media_file: doorbell_sound
+          announcement: true
+      - wait_until:
+          media_player.is_announcing:
+      - wait_until:
+          not:
+            media_player.is_announcing:
+      - media_player.stop:
+          announcement: true
+      - mixer_speaker.apply_ducking:
+          id: media_spk_mixer_input
+          decibel_reduction: 0
+          duration: 2.0s
