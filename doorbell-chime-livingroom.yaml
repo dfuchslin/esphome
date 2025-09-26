@@ -16,7 +16,7 @@ esphome:
             media_player.is_announcing:
       - media_player.stop:
           announcement: true
-      - media_player.volume_set: 90%
+      - media_player.volume_set: 80%
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 #psram:
