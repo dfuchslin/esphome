@@ -1,0 +1,81 @@
+esphome:
+  name: garage-dehumidifier
+  friendly_name: garage-dehumidifier
+
+# https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
+psram:
+  mode: octal
+  speed: 80MHz
+
+esp32:
+  board: seeed_xiao_esp32s3
+  framework:
+    type: esp-idf
+
+logger:
+#  level: VERY_VERBOSE
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  # esp32 needs the output_power setting, see https://github.com/espressif/arduino-esp32/issues/2144#issuecomment-2028949116
+  output_power: 8.5dB
+
+web_server:
+  port: 80
+
+prometheus:
+
+status_led:
+  pin:
+    number: GPIO21  #LED_BUILTIN
+    inverted: true
+
+# JSN_SR04T
+uart:
+  id: uart_bus
+  tx_pin: GPIO8  # verify these two
+  rx_pin: GPIO9
+  baud_rate: 9600
+  stop_bits: 1
+
+# DS18B20
+one_wire:
+  - platform: gpio
+    pin: GPIO6
+    id: bus1
+
+sensor:
+  - platform: jsn_sr04t
+    name: "Water level"
+    update_interval: 10s
+  - platform: dallas_temp
+    one_wire_id: bus1
+    name: "Outlet temperature"
+    accuracy_decimals: 2
+    filters:
+      - round: 2
+#      - sliding_window_moving_average:
+#          window_size: 10
+#          send_every: 10
+#          send_first_at: 1
+    update_interval: 60s
+
+switch:
+  - platform: gpio
+    name: "Pump"
+    icon: "mdi:water-pump"
+    pin: GPIO7
+  - platform: gpio
+    name: "Heater"
+    icon: "mdi:heat-wave"
+    pin: GPIO5
