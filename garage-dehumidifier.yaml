@@ -61,13 +61,13 @@ one_wire:
 
 sensor:
   - platform: jsn_sr04t
-    name: "Tank Fill Percentage"
-    id: tank_fill_percentage
+    name: "Water Tank Percentage"
     unit_of_measurement: "%"
     icon: "mdi:water-percent"
     accuracy_decimals: 1
-    update_interval: 10s
+#    update_interval: 30s (not working... use throttle filter)
     filters:
+      - throttle: 30s
       - lambda: |-
           // Convert distance to percentage: 0.010m = 100%, 0.168m = 0%
           if (isnan(x)) return NAN;
