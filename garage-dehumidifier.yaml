@@ -40,11 +40,16 @@ status_led:
     number: GPIO21  #LED_BUILTIN
     inverted: true
 
+external_components:
+  - source:
+      type: local
+      path: components
+
 # JSN_SR04T
 uart:
   id: uart_bus
-  tx_pin: GPIO8  # verify these two
-  rx_pin: GPIO9
+  tx_pin: GPIO9  # gpio9=yellow
+  rx_pin: GPIO8  # gpio8=white
   baud_rate: 9600
   stop_bits: 1
 
@@ -56,8 +61,24 @@ one_wire:
 
 sensor:
   - platform: jsn_sr04t
-    name: "Water level"
+    name: "Tank Fill Percentage"
+    id: tank_fill_percentage
+    unit_of_measurement: "%"
+    icon: "mdi:water-percent"
+    accuracy_decimals: 1
     update_interval: 10s
+    filters:
+      - lambda: |-
+          // Convert distance to percentage: 0.010m = 100%, 0.168m = 0%
+          if (isnan(x)) return NAN;
+          
+          // Clamp distance to valid range
+          if (x <= 0.010) return 100.0;
+          if (x >= 0.168) return 0.0;
+          
+          // Linear interpolation: percentage = 100 * (max_distance - distance) / (max_distance - min_distance)
+          float percentage = 100.0 * (0.168 - x) / (0.168 - 0.010);
+          return percentage;
   - platform: dallas_temp
     one_wire_id: bus1
     name: "Outlet temperature"
