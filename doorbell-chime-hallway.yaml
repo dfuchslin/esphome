@@ -19,12 +19,12 @@ esphome:
       - media_player.volume_set: 80%
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
-#psram:
-#  mode: octal
-#  speed: 80MHz
+psram:
+  mode: octal
+  speed: 80MHz
 
 esp32:
-  board: tinypico
+  variant: esp32s3
   framework:
     type: esp-idf
 
@@ -64,15 +64,16 @@ sensor:
 # cool idea for the rgb led: https://github.com/esphome/esphome/pull/5814:
 
 i2s_audio:
-  i2s_lrclk_pin: GPIO27
-  i2s_bclk_pin: GPIO26
+  i2s_lrclk_pin: GPIO4
+  i2s_bclk_pin: GPIO5
 
 speaker:
   - platform: i2s_audio
     id: speaker_id
     dac_type: external
-    i2s_dout_pin: GPIO25
-    sample_rate: 48000
+    i2s_dout_pin: GPIO6
+    bits_per_sample: 16bit
+    sample_rate: 44100
   - platform: mixer
     id: mixer_speaker_id
     output_speaker: speaker_id
@@ -95,13 +96,15 @@ media_player:
       num_channels: 2
     announcement_pipeline:
       speaker: announcement_spk_resampling_input
+      format: FLAC
       num_channels: 1
-    # Placed in the assets dir. Should be encoded with a 48000 Hz sample rate, mono or stereo audio, and 16 bits per sample.
+      sample_rate: 44100
+    # Placed in the assets dir. Should be encoded with a 44100 Hz sample rate, mono or stereo audio, and 16 bits per sample.
     files:
       - id: doorbell_sound
-        file: assets/doorbell-1chan-48000.flac
+        file: assets/doorbell-1chan-44100.flac
       - id: chime_sound
-        file: assets/sbb-1chan-48000.flac
+        file: assets/sbb-1chan-44100.flac
 
 button:
   - platform: template
@@ -115,6 +118,29 @@ button:
           duration: 0.0s
       - media_player.speaker.play_on_device_media_file:
           media_file: doorbell_sound
+          announcement: true
+      - wait_until:
+          media_player.is_announcing:
+      - wait_until:
+          not:
+            media_player.is_announcing:
+      - media_player.stop:
+          announcement: true
+      - mixer_speaker.apply_ducking:
+          id: media_spk_mixer_input
+          decibel_reduction: 0
+          duration: 2.0s
+  - platform: template
+    id: announcement_button
+    name: Announcement Chime
+    icon: "mdi:bell"
+    on_press:
+      - mixer_speaker.apply_ducking:
+          id: media_spk_mixer_input
+          decibel_reduction: 20
+          duration: 0.0s
+      - media_player.speaker.play_on_device_media_file:
+          media_file: chime_sound
           announcement: true
       - wait_until:
           media_player.is_announcing:
