@@ -58,6 +58,7 @@ wifi:
   power_save_mode: none
   # esp32 needs the output_power setting, see https://github.com/espressif/arduino-esp32/issues/2144#issuecomment-2028949116
   output_power: 8.5dB
+  min_auth_mode: WPA2
 
 web_server:
   port: 80
