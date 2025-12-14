@@ -36,6 +36,12 @@ web_server:
 
 prometheus:
 
+i2c:
+  sda: GPIO5
+  scl: GPIO6
+  scan: true
+  id: i2c_bus
+
 sensor:
   - platform: uptime
     name: Uptime
@@ -44,15 +50,16 @@ sensor:
     name: WiFi Signal
     update_interval: 60s
 
-  - platform: dht
-    pin: GPIO8
+  - platform: scd4x
+    i2c_id: i2c_bus
+    co2:
+      name: "Storage Room CO2"
     temperature:
       name: "Storage Room Temperature"
       accuracy_decimals: 1
     humidity:
       name: "Storage Room Humidity"
-      accuracy_decimals: 0
-    update_interval: 120s
+      accuracy_decimals: 1
 
   - platform: pulse_counter
     pin:
