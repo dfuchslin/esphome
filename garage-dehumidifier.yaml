@@ -61,13 +61,14 @@ one_wire:
 
 sensor:
   - platform: jsn_sr04t
+    id: water_pct
     name: "Water Tank Percentage"
     unit_of_measurement: "%"
     icon: "mdi:water-percent"
     accuracy_decimals: 1
 #    update_interval: 30s (not working... use throttle filter)
     filters:
-      - throttle: 30s
+      - throttle: 15s
       - lambda: |-
           // Convert distance to percentage: 0.010m = 100%, 0.168m = 0%
           if (isnan(x)) return NAN;
@@ -91,12 +92,55 @@ sensor:
 #          send_first_at: 1
     update_interval: 60s
 
+binary_sensor:
+  - platform: template
+    id: low_tank_sustained
+    name: "Low tank (sustained)"
+    device_class: problem
+    lambda: |-
+      return !isnan(id(water_pct).state) && id(water_pct).state <= 5.0;
+    filters:
+      - delayed_on: 45s   # must stay low for 45s to trip
+      - delayed_off: 20s  # adds a little hysteresis before clearing
+    # Turn pump off if low level is sustained while pump is ON
+    on_press:
+      - if:
+          condition:
+            switch.is_on: pump
+          then:
+            - logger.log: "Dry-run: tank low, turning pump OFF"
+            - switch.turn_off: pump
+            - homeassistant.service:
+                service: persistent_notification.create
+                data:
+                  title: "Pump dry-run protection tripped"
+                  message: "Pump turned off due to low water level (≤5%)."
+
 switch:
   - platform: gpio
+    id: pump
     name: "Pump"
     icon: "mdi:water-pump"
     pin: GPIO7
+    on_turn_on:
+      - script.execute: pump_guard_timer
   - platform: gpio
     name: "Heater"
     icon: "mdi:heat-wave"
     pin: GPIO5
+
+script:
+  - id: pump_guard_timer
+    mode: restart
+    then:
+      - delay: 2min
+      - if:
+          condition:
+            and:
+              - switch.is_on: pump
+              - sensor.in_range:
+                  id: water_pct
+                  below: 5.0
+          then:
+            - logger.log: "Dry-run timer: still low after 2 min, turning OFF"
+            - switch.turn_off: pump
