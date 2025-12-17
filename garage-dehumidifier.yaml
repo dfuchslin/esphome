@@ -35,6 +35,16 @@ web_server:
 
 prometheus:
 
+number:
+  - platform: template
+    id: tank_low_threshold
+    name: "Tank low threshold (%)"
+    optimistic: true
+    min_value: 0
+    max_value: 30
+    step: 0.5
+    initial_value: 5
+
 status_led:
   pin:
     number: GPIO21  #LED_BUILTIN
@@ -98,7 +108,7 @@ binary_sensor:
     name: "Low tank (sustained)"
     device_class: problem
     lambda: |-
-      return !isnan(id(water_pct).state) && id(water_pct).state <= 5.0;
+      return !isnan(id(water_pct).state) && id(water_pct).state <= id(tank_low_threshold).state;
     filters:
       - delayed_on: 45s   # must stay low for 45s to trip
       - delayed_off: 20s  # adds a little hysteresis before clearing
@@ -114,7 +124,12 @@ binary_sensor:
                 service: persistent_notification.create
                 data:
                   title: "Pump dry-run protection tripped"
-                  message: "Pump turned off due to low water level (≤5%)."
+                  message: !lambda |-
+                    char buf[96];
+                    snprintf(buf, sizeof(buf),
+                             "Pump turned off due to low water level (≤%.1f%%).",
+                             (double) id(tank_low_threshold).state);
+                    return std::string(buf);
 
 switch:
   - platform: gpio
@@ -124,7 +139,10 @@ switch:
     pin: GPIO7
     on_turn_on:
       - script.execute: pump_guard_timer
+    on_turn_off:
+      - switch.turn_off: heater
   - platform: gpio
+    id: heater
     name: "Heater"
     icon: "mdi:heat-wave"
     pin: GPIO5
@@ -138,9 +156,9 @@ script:
           condition:
             and:
               - switch.is_on: pump
-              - sensor.in_range:
-                  id: water_pct
-                  below: 5.0
+              - lambda: |-
+                  return !isnan(id(water_pct).state) &&
+                         id(water_pct).state <= id(tank_low_threshold).state;
           then:
             - logger.log: "Dry-run timer: still low after 2 min, turning OFF"
             - switch.turn_off: pump
