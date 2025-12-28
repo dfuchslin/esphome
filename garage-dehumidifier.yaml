@@ -2,6 +2,14 @@ esphome:
   name: garage-dehumidifier
   friendly_name: garage-dehumidifier
 
+globals:
+  - id: sensor_max_distance
+    type: float
+    initial_value: '0.168'
+  - id: sensor_min_distance
+    type: float
+    initial_value: '0.010'
+
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
   mode: octal
@@ -44,6 +52,14 @@ number:
     max_value: 30
     step: 0.5
     initial_value: 5
+  - platform: template
+    id: tank_high_threshold
+    name: "Tank high threshold (%)"
+    optimistic: true
+    min_value: 30
+    max_value: 100
+    step: 0.5
+    initial_value: 95
 
 status_led:
   pin:
@@ -84,11 +100,11 @@ sensor:
           if (isnan(x)) return NAN;
           
           // Clamp distance to valid range
-          if (x <= 0.010) return 100.0;
-          if (x >= 0.168) return 0.0;
+          if (x <= id(sensor_min_distance)) return 100.0;
+          if (x >= id(sensor_max_distance)) return 0.0;
           
           // Linear interpolation: percentage = 100 * (max_distance - distance) / (max_distance - min_distance)
-          float percentage = 100.0 * (0.168 - x) / (0.168 - 0.010);
+          float percentage = 100.0 * (id(sensor_max_distance) - x) / (id(sensor_max_distance) - id(sensor_min_distance));
           return percentage;
   - platform: dallas_temp
     one_wire_id: bus1
@@ -130,6 +146,23 @@ binary_sensor:
                              "Pump turned off due to low water level (≤%.1f%%).",
                              (double) id(tank_low_threshold).state);
                     return std::string(buf);
+  - platform: template
+    id: high_tank_sustained
+    name: "High tank (sustained)"
+    device_class: problem
+    lambda: |-
+      return !isnan(id(water_pct).state) && id(water_pct).state >= id(tank_high_threshold).state;
+    filters:
+      - delayed_on: 45s   # must stay low for 45s to trip
+      - delayed_off: 20s  # adds a little hysteresis before clearing
+    # Turn pump on if high level is sustained while pump is OFF
+    on_press:
+      - if:
+          condition:
+            switch.is_off: pump
+          then:
+            - logger.log: "Tank full, turning pump ON"
+            - switch.turn_on: pump
 
 switch:
   - platform: gpio
