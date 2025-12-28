@@ -75,19 +75,19 @@ fan:
             condition:
               lambda: 'return !id(automation_running);'
             then:
-              - switch.turn_off: fan_auto_mode
+              - switch.turn_on: fan_manual_override
 
 switch:
   - platform: template
-    name: "Fan Auto Mode"
-    id: fan_auto_mode
+    name: "Fan Manual Override"
+    id: fan_manual_override
     optimistic: true
-    restore_mode: ALWAYS_ON
+    restore_mode: ALWAYS_OFF
     entity_category: config
-    on_turn_off:
+    on_turn_on:
       then:
         - delay: 30min
-        - switch.turn_on: fan_auto_mode
+        - switch.turn_off: fan_manual_override
 
 sensor:
   - platform: uptime
@@ -106,8 +106,7 @@ sensor:
         then:
           - if:
               condition:
-                # Check if Auto mode switch is ON
-                switch.is_on: fan_auto_mode
+                switch.is_off: fan_manual_override
               then:
                 - lambda: 'id(automation_running) = true;'
                 - if:
