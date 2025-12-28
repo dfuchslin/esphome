@@ -1,0 +1,72 @@
+esphome:
+  name: power-meter-monitor
+  friendly_name: power-meter-monitor
+
+# https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
+psram:
+  mode: octal
+  speed: 80MHz
+
+# https://www.waveshare.com/wiki/ESP32-S3-ETH
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+logger:
+#  level: VERY_VERBOSE
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# do not enable wifi use ethernet instead
+# wifi:
+
+ethernet:
+  type: W5500
+  mosi_pin: GPIO11
+  miso_pin: GPIO12
+  clk_pin: GPIO13
+  cs_pin: GPIO14
+  reset_pin: GPIO9
+  interrupt_pin: GPIO10
+  clock_speed: 25MHz
+
+web_server:
+  port: 80
+
+prometheus:
+
+#status_led:
+#  pin:
+#    number: GPIO21  #LED_BUILTIN
+#    inverted: false
+
+packages:
+  status_led: !include common/status_led_package_ethernet.yaml
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: system_status_led             # DO NOT CHANGE
+    pin: GPIO21                       # check your board
+    rgb_order: GRB                    # check your board
+    num_leds: 1
+    chipset: ws2812                   # check your board
+    name: "onboard LED"
+    disabled_by_default: true
+    default_transition_length: 200ms
+    icon: mdi:led-outline
+    restore_mode: ALWAYS_OFF
+    effects:
+      - pulse:
+          name: "Slow Pulse"          # REQUIRED
+          update_interval: 2s         # can be adjusted
+      - pulse:
+          name: "Fast Pulse"          # REQUIRED
+          update_interval: 500ms      # can be adjusted

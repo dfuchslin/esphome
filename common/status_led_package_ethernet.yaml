@@ -1,0 +1,142 @@
+################################
+# from https://github.com/Flo-R1der/ESPHome_RGB-Status-LED_Package/blob/main/status_led_package.yaml
+# modified to use ethernet not wifi
+###############################
+
+##### GLOBAL DEFINITIONS AND SUBSTITUTIONS #####
+globals:
+  - id: boot_done
+    type: bool
+    initial_value: "false"
+  - id: wifi_ok
+    type: bool
+    initial_value: "true"
+  - id: api_ok
+    type: bool
+    initial_value: "false"
+
+substitutions:
+  system_status_led_brightness: "50%"   # Default
+
+
+
+##### CATCH SYSTEM EVENTS #####
+# boot priority values: https://esphome.io/components/esphome/#configuration-variables-1
+esphome:
+  on_boot:
+    - priority: 700
+      then:
+        - script.execute: led_system_status
+    - priority: -10
+      then:
+        - delay: 500ms
+          # depending on your board, the red LED may light up so shortly that you don't see it
+          # this delay ensures the red light comes up and you can recognize boot-loop issues
+        - lambda: 'id(boot_done) = true;'
+        - script.execute: led_system_status
+
+# these triggers do not exist yet: https://github.com/esphome/feature-requests/issues/2882
+#ethernet:
+#  on_connect:
+#    then:
+#      - lambda: 'id(wifi_ok) = true;'
+#      - script.execute: led_system_status
+#  on_disconnect:
+#    then:
+#      - lambda: 'id(wifi_ok) = false;'
+#      - script.execute: led_system_status
+
+api:
+  on_client_connected:
+    then:
+      - lambda: 'id(api_ok) = true;'
+      - script.execute: led_system_status
+  on_client_disconnected:
+    then:
+      - lambda: 'id(api_ok) = false;'
+      - script.execute: led_system_status
+
+
+
+##### ASSIGN COLORS TO LED #####
+script:
+  - id: led_system_status
+    mode: restart
+    then:
+      # API CONNECTED (Priority 4) - green (steady)
+      - if:
+          condition:
+            lambda: 'return id(api_ok);'
+          then:
+            - light.turn_on:
+                id: system_status_led
+                red: 0%
+                green: 100%
+                blue: 10%
+                brightness: ${system_status_led_brightness}
+                effect: none
+            - script.stop:
+                id: led_system_status
+
+      # WIFI OK (Priority 3) - white (steady)
+      - if:
+          condition:
+            lambda: 'return id(wifi_ok);'
+          then:
+            - light.turn_on:
+                id: system_status_led
+                red: 100%
+                green: 100%
+                blue: 100%
+                brightness: ${system_status_led_brightness}
+                effect: none
+            - script.stop:
+                id: led_system_status
+
+      # BOOT DONE (Priority 2) - yellow (fast pulse)
+      - if:
+          condition:
+            lambda: 'return id(boot_done);'
+          then:
+            - light.turn_on:
+                id: system_status_led
+                red: 100%
+                green: 100%
+                blue: 0
+                brightness: 50%
+                effect: "Fast Pulse"
+            - script.stop:
+                id: led_system_status
+
+      # BOOTING (Priority 1) - red (fast pulse)
+      - light.turn_on:
+          id: system_status_led
+          red: 100%
+          green: 0
+          blue: 0
+          brightness: 50%
+          effect: "Fast Pulse"
+
+
+  - id: led_working_status_1
+    # WORKING MODE 1 - blue (slow pulse)
+    then:
+      - light.turn_on:
+          id: system_status_led
+          red: 0%
+          green: 0%
+          blue: 100%
+          brightness: ${system_status_led_brightness}
+          effect: "Slow Pulse"
+
+  - id: led_working_status_2
+    # WORKING MODE 2 - purple (slow pulse)
+    then:
+      - light.turn_on:
+          id: system_status_led
+          red: 80%
+          green: 0%
+          blue: 80%
+          brightness: ${system_status_led_brightness}
+          effect: "Slow Pulse"
+###################
