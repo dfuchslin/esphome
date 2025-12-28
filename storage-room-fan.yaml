@@ -66,15 +66,6 @@ fan:
     output: fan_speed_control
     name: "Storage Room Fan"
     id: storage_fan
-    # Define the "Auto" preset
-    preset_modes:
-      - Auto
-      - Manual
-
-    on_preset_set:
-      # This handles when you tap "Auto" in HomeKit/HA
-      then:
-        - logger.log: "Preset changed"
 
     on_speed_set:
       # If speed is adjusted manually and we aren't in 'Auto',
@@ -84,11 +75,19 @@ fan:
             condition:
               lambda: 'return !id(automation_running);'
             then:
-              # If user touches the slider, we could clear the preset
-              - lambda: |-
-                  auto call = id(storage_fan).make_call();
-                  call.set_preset_mode("Manual");
-                  call.perform();
+              - switch.turn_off: fan_auto_mode
+
+switch:
+  - platform: template
+    name: "Fan Auto Mode"
+    id: fan_auto_mode
+    optimistic: true
+    restore_mode: ALWAYS_ON
+    entity_category: config
+    on_turn_off:
+      then:
+        - delay: 30min
+        - switch.turn_on: fan_auto_mode
 
 sensor:
   - platform: uptime
@@ -107,8 +106,8 @@ sensor:
         then:
           - if:
               condition:
-                # Check if the "Auto" preset is active
-                lambda: 'return id(storage_fan).get_preset_mode() != nullptr && std::string(id(storage_fan).get_preset_mode()) == "Auto";'
+                # Check if Auto mode switch is ON
+                switch.is_on: fan_auto_mode
               then:
                 - lambda: 'id(automation_running) = true;'
                 - if:
