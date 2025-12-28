@@ -9,6 +9,12 @@ globals:
   - id: sensor_min_distance
     type: float
     initial_value: '0.010'
+  - id: tank_low_threshold
+    type: float
+    initial_value: '5.0'
+  - id: tank_high_threshold
+    type: float
+    initial_value: '95.0'
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
@@ -42,24 +48,6 @@ web_server:
   port: 80
 
 prometheus:
-
-number:
-  - platform: template
-    id: tank_low_threshold
-    name: "Tank low threshold (%)"
-    optimistic: true
-    min_value: 0
-    max_value: 30
-    step: 0.5
-    initial_value: 5
-  - platform: template
-    id: tank_high_threshold
-    name: "Tank high threshold (%)"
-    optimistic: true
-    min_value: 30
-    max_value: 100
-    step: 0.5
-    initial_value: 95
 
 status_led:
   pin:
@@ -108,6 +96,7 @@ sensor:
           return percentage;
   - platform: dallas_temp
     one_wire_id: bus1
+    id: outlet_temperature
     name: "Outlet temperature"
     accuracy_decimals: 2
     filters:
@@ -124,7 +113,7 @@ binary_sensor:
     name: "Low tank (sustained)"
     device_class: problem
     lambda: |-
-      return !isnan(id(water_pct).state) && id(water_pct).state <= id(tank_low_threshold).state;
+      return !isnan(id(water_pct).state) && id(water_pct).state <= id(tank_low_threshold);
     filters:
       - delayed_on: 45s   # must stay low for 45s to trip
       - delayed_off: 20s  # adds a little hysteresis before clearing
@@ -144,14 +133,14 @@ binary_sensor:
                     char buf[96];
                     snprintf(buf, sizeof(buf),
                              "Pump turned off due to low water level (≤%.1f%%).",
-                             (double) id(tank_low_threshold).state);
+                             (double) id(tank_low_threshold));
                     return std::string(buf);
   - platform: template
     id: high_tank_sustained
     name: "High tank (sustained)"
     device_class: problem
     lambda: |-
-      return !isnan(id(water_pct).state) && id(water_pct).state >= id(tank_high_threshold).state;
+      return !isnan(id(water_pct).state) && id(water_pct).state >= id(tank_high_threshold);
     filters:
       - delayed_on: 45s   # must stay low for 45s to trip
       - delayed_off: 20s  # adds a little hysteresis before clearing
@@ -172,6 +161,11 @@ switch:
     pin: GPIO7
     on_turn_on:
       - script.execute: pump_guard_timer
+      - if:
+          condition:
+            lambda: 'return id(outlet_temperature).state <= 1.0;'
+          then:
+            - switch.turn_on: heater
     on_turn_off:
       - switch.turn_off: heater
   - platform: gpio
@@ -179,6 +173,10 @@ switch:
     name: "Heater"
     icon: "mdi:heat-wave"
     pin: GPIO5
+    on_turn_on:
+      then:
+        - delay: 30min
+        - switch.turn_off: heater
 
 script:
   - id: pump_guard_timer
@@ -191,7 +189,8 @@ script:
               - switch.is_on: pump
               - lambda: |-
                   return !isnan(id(water_pct).state) &&
-                         id(water_pct).state <= id(tank_low_threshold).state;
+                         id(water_pct).state <= id(tank_low_threshold);
           then:
             - logger.log: "Dry-run timer: still low after 2 min, turning OFF"
             - switch.turn_off: pump
+            - switch.turn_off: heater
