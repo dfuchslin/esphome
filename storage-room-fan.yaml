@@ -3,8 +3,15 @@
 esphome:
   name: storage-room-fan
   friendly_name: Storage Room Fan Control
+  on_boot:
+    priority: -10
+    then:
+      - lambda: 'id(boot_finished) = true;'
 
 globals:
+  - id: boot_finished
+    type: bool
+    initial_value: 'false'
   - id: automation_running
     type: bool
     initial_value: 'false'
@@ -73,7 +80,7 @@ fan:
       then:
         - if:
             condition:
-              lambda: 'return !id(automation_running);'
+              lambda: 'return id(boot_finished) && !id(automation_running);'
             then:
               - switch.turn_on: fan_manual_override
 
