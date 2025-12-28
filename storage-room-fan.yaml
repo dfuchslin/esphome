@@ -4,6 +4,17 @@ esphome:
   name: storage-room-fan
   friendly_name: Storage Room Fan Control
 
+globals:
+  - id: automation_running
+    type: bool
+    initial_value: 'false'
+  - id: co2_threshold_low
+    type: float
+    initial_value: '450.0'
+  - id: co2_threshold_high
+    type: float
+    initial_value: '3500.0'
+
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
   mode: octal
@@ -42,6 +53,43 @@ i2c:
   scan: true
   id: i2c_bus
 
+output:
+  - platform: ledc
+    id: fan_speed_control
+    pin: GPIO7
+    frequency: "25000 Hz"
+    min_power: 1%
+    max_power: 100%
+
+fan:
+  - platform: speed
+    output: fan_speed_control
+    name: "Storage Room Fan"
+    id: storage_fan
+    # Define the "Auto" preset
+    preset_modes:
+      - Auto
+      - Manual
+
+    on_preset_set:
+      # This handles when you tap "Auto" in HomeKit/HA
+      then:
+        - logger.log: "Preset changed"
+
+    on_speed_set:
+      # If speed is adjusted manually and we aren't in 'Auto',
+      # the automation will effectively stay 'off' because we check the preset.
+      then:
+        - if:
+            condition:
+              lambda: 'return !id(automation_running);'
+            then:
+              # If user touches the slider, we could clear the preset
+              - lambda: |-
+                  auto call = id(storage_fan).make_call();
+                  call.set_preset_mode("Manual");
+                  call.perform();
+
 sensor:
   - platform: uptime
     name: Uptime
@@ -54,6 +102,27 @@ sensor:
     i2c_id: i2c_bus
     co2:
       name: "Storage Room CO2"
+      id: storage_room_co2
+      on_value:
+        then:
+          - if:
+              condition:
+                # Check if the "Auto" preset is active
+                lambda: 'return id(storage_fan).get_preset_mode() != nullptr && std::string(id(storage_fan).get_preset_mode()) == "Auto";'
+              then:
+                - lambda: 'id(automation_running) = true;'
+                - if:
+                    condition:
+                      lambda: 'return x <= id(co2_threshold_low);'
+                    then:
+                      - fan.turn_off: storage_fan
+                    else:
+                      - fan.turn_on:
+                          id: storage_fan
+                          speed: !lambda |-
+                            if (x >= id(co2_threshold_high)) return 100;
+                            return (int)((x - id(co2_threshold_low)) / (id(co2_threshold_high) - id(co2_threshold_low)) * 100.0);
+                - lambda: 'id(automation_running) = false;'
     temperature:
       name: "Storage Room Temperature"
       accuracy_decimals: 1
@@ -79,16 +148,3 @@ status_led:
   pin:
     number: GPIO21  # LED_BUILTIN
     inverted: true
-
-output:
-  - platform: ledc
-    id: fan_speed_control
-    pin: GPIO7
-    frequency: "25000 Hz"
-    min_power: 1%
-    max_power: 100%
-
-fan:
-  - platform: speed
-    output: fan_speed_control
-    name: Storage Room Fan
