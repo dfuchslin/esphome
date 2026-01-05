@@ -125,8 +125,10 @@ sensor:
                       - fan.turn_on:
                           id: storage_fan
                           speed: !lambda |-
-                            if (x >= id(co2_threshold_high)) return 100;
-                            return (int)((x - id(co2_threshold_low)) / (id(co2_threshold_high) - id(co2_threshold_low)) * 100.0);
+                            float raw = (x - id(co2_threshold_low)) / (id(co2_threshold_high) - id(co2_threshold_low)) * 100.0;
+                            if (raw <= 10.0) return 10;
+                            if (raw >= 100.0) return 100;
+                            return (int)(ceil(raw / 5.0) * 5.0);
                 - lambda: 'id(automation_running) = false;'
     temperature:
       name: "Storage Room Temperature"
