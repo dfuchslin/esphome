@@ -24,7 +24,8 @@ psram:
   speed: 80MHz
 
 esp32:
-  variant: esp32s3
+  board: seeed_xiao_esp32s3
+  flash_size: 8MB
   framework:
     type: esp-idf
 

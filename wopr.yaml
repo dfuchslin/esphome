@@ -11,6 +11,7 @@ psram:
 
 esp32:
   board: seeed_xiao_esp32s3
+  flash_size: 8MB
   framework:
     type: esp-idf
 
