@@ -17,7 +17,7 @@ globals:
     initial_value: 'false'
   - id: co2_threshold_low
     type: float
-    initial_value: '450.0'
+    initial_value: '475.0'
   - id: co2_threshold_high
     type: float
     initial_value: '3500.0'

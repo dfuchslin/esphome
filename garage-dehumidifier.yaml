@@ -114,7 +114,8 @@ binary_sensor:
     name: "Low tank (sustained)"
     device_class: problem
     lambda: |-
-      return !isnan(id(water_pct).state) && id(water_pct).state <= id(tank_low_threshold);
+      if (isnan(id(water_pct).state)) return {}; // don't change state on NAN
+      return id(water_pct).state <= id(tank_low_threshold);
     filters:
       - delayed_on: 45s   # must stay low for 45s to trip
       - delayed_off: 20s  # adds a little hysteresis before clearing
@@ -141,9 +142,10 @@ binary_sensor:
     name: "High tank (sustained)"
     device_class: problem
     lambda: |-
-      return !isnan(id(water_pct).state) && id(water_pct).state >= id(tank_high_threshold);
+      if (isnan(id(water_pct).state)) return {}; // don't change state on NAN
+      return id(water_pct).state >= id(tank_high_threshold);
     filters:
-      - delayed_on: 45s   # must stay low for 45s to trip
+      - delayed_on: 45s   # must stay high for 45s to trip
       - delayed_off: 20s  # adds a little hysteresis before clearing
     # Turn pump on if high level is sustained while pump is OFF
     on_press:
@@ -188,10 +190,21 @@ script:
           condition:
             and:
               - switch.is_on: pump
-              - lambda: |-
-                  return !isnan(id(water_pct).state) &&
-                         id(water_pct).state <= id(tank_low_threshold);
+              - binary_sensor.is_on: low_tank_sustained
           then:
             - logger.log: "Dry-run timer: still low after 2 min, turning OFF"
             - switch.turn_off: pump
             - switch.turn_off: heater
+      - delay: 28min
+      - if:
+          condition:
+            switch.is_on: pump
+          then:
+            - logger.log: "Max run time reached, turning pump OFF"
+            - switch.turn_off: pump
+            - switch.turn_off: heater
+            - homeassistant.service:
+                service: persistent_notification.create
+                data:
+                  title: "Pump safety timeout"
+                  message: "Pump turned off after 30 minutes of continuous operation."
