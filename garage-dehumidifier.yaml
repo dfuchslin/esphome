@@ -75,6 +75,13 @@ one_wire:
     id: bus1
 
 sensor:
+  - platform: uptime
+    name: Uptime
+
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+
   - platform: jsn_sr04t
     id: water_pct
     name: "Water Tank Percentage"
