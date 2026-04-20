@@ -21,6 +21,12 @@ globals:
   - id: co2_threshold_high
     type: float
     initial_value: '3500.0'
+  - id: temp_threshold_low
+    type: float
+    initial_value: '15'
+  - id: temp_threshold_high
+    type: float
+    initial_value: '26'
 
 # https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
 psram:
@@ -85,6 +91,47 @@ fan:
             then:
               - switch.turn_on: fan_manual_override
 
+script:
+  - id: update_fan_speed
+    mode: restart
+    then:
+      - if:
+          condition:
+            switch.is_off: fan_manual_override
+          then:
+            - lambda: |-
+                id(automation_running) = true;
+                float co2 = id(storage_room_co2).state;
+                float temp = id(storage_room_temp).state;
+                
+                float co2_speed = 0;
+                if (!std::isnan(co2) && co2 > id(co2_threshold_low)) {
+                  co2_speed = (co2 - id(co2_threshold_low)) / (id(co2_threshold_high) - id(co2_threshold_low)) * 100.0;
+                }
+                
+                float temp_speed = 0;
+                if (!std::isnan(temp) && temp > id(temp_threshold_low)) {
+                  temp_speed = (temp - id(temp_threshold_low)) / (id(temp_threshold_high) - id(temp_threshold_low)) * 100.0;
+                }
+                
+                float max_speed = std::max(co2_speed, temp_speed);
+                
+                if (max_speed <= 0) {
+                  auto call = id(storage_fan).make_call();
+                  call.set_state(false);
+                  call.perform();
+                } else {
+                  if (max_speed < 10.0) max_speed = 10.0;
+                  if (max_speed > 100.0) max_speed = 100.0;
+                  int final_speed = (int)(ceil(max_speed / 5.0) * 5.0);
+                  
+                  auto call = id(storage_fan).make_call();
+                  call.set_state(true);
+                  call.set_speed(final_speed);
+                  call.perform();
+                }
+                id(automation_running) = false;
+
 switch:
   - platform: template
     name: "Fan Manual Override"
@@ -112,28 +159,14 @@ sensor:
       id: storage_room_co2
       on_value:
         then:
-          - if:
-              condition:
-                switch.is_off: fan_manual_override
-              then:
-                - lambda: 'id(automation_running) = true;'
-                - if:
-                    condition:
-                      lambda: 'return x <= id(co2_threshold_low);'
-                    then:
-                      - fan.turn_off: storage_fan
-                    else:
-                      - fan.turn_on:
-                          id: storage_fan
-                          speed: !lambda |-
-                            float raw = (x - id(co2_threshold_low)) / (id(co2_threshold_high) - id(co2_threshold_low)) * 100.0;
-                            if (raw <= 10.0) return 10;
-                            if (raw >= 100.0) return 100;
-                            return (int)(ceil(raw / 5.0) * 5.0);
-                - lambda: 'id(automation_running) = false;'
+          - script.execute: update_fan_speed
     temperature:
       name: "Storage Room Temperature"
+      id: storage_room_temp
       accuracy_decimals: 1
+      on_value:
+        then:
+          - script.execute: update_fan_speed
     humidity:
       name: "Storage Room Humidity"
       accuracy_decimals: 1
