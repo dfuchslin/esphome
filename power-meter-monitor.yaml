@@ -1,18 +1,34 @@
 esphome:
   name: power-meter-monitor
   friendly_name: power-meter-monitor
+  on_boot:
+    then:
+      - pulse_meter.set_total_pulses:
+          id: power_meter_pulse
+          value: !lambda 'return id(power_meter_pulse_count_raw);'
+      - lambda: |-
+          id(power_meter_energy_total_kwh).publish_state(
+            id(power_meter_pulse_count_raw) / (float) ${pulses_per_kwh});
 
-# https://community.home-assistant.io/t/esp32-s3-devkitc-1-n16r8-using-psram-howto/652601/8
-psram:
-  mode: octal
-  speed: 80MHz
+substitutions:
+  # Confirm against the physical meter's nameplate (imp/kWh).
+  # 1000 imp/kWh matches the assumption implied (never enforced) by the old Pi app.
+  pulses_per_kwh: "1000"
 
-# https://www.waveshare.com/wiki/ESP32-S3-ETH
+# https://devices.esphome.io/devices/waveshare-esp32-p4-eth
 esp32:
-  board: esp32-s3-devkitc-1
-  flash_size: 16MB
+  board: esp32-p4-evboard
+  variant: esp32p4
+  flash_size: 32MB
+  cpu_frequency: 360MHZ
   framework:
     type: esp-idf
+    advanced:
+      enable_idf_experimental_features: yes
+
+psram:
+  mode: hex
+  speed: 200MHz
 
 logger:
 #  level: VERY_VERBOSE
@@ -25,48 +41,76 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
-# do not enable wifi use ethernet instead
+# ESP32-P4 has no WiFi radio at all - ethernet is mandatory
 # wifi:
 
 ethernet:
-  type: W5500
-  mosi_pin: GPIO11
-  miso_pin: GPIO12
-  clk_pin: GPIO13
-  cs_pin: GPIO14
-  reset_pin: GPIO9
-  interrupt_pin: GPIO10
-  clock_speed: 25MHz
+  type: IP101
+  mdc_pin: GPIO31
+  mdio_pin: GPIO52
+  power_pin: GPIO51
+  clk:
+    mode: CLK_EXT_IN
+    pin: GPIO50
+  phy_addr: 1
 
 web_server:
   port: 80
 
 prometheus:
+  relabel:
+    power_meter_pulse:
+      id: "power_meter_watts"
+    power_meter_pulse_total:
+      id: "power_meter_pulses_total"
+    power_meter_energy_total_kwh:
+      id: "power_meter_kwh_total"
 
-#status_led:
-#  pin:
-#    number: GPIO21  #LED_BUILTIN
-#    inverted: false
+globals:
+  - id: power_meter_pulse_count_raw
+    type: uint32_t
+    restore_value: true
+    initial_value: "0"
 
-packages:
-  status_led: !include common/status_led_package_ethernet.yaml
+sensor:
+  - platform: pulse_meter
+    id: power_meter_pulse
+    pin:
+      number: GPIO19
+      mode:
+        input: true
+        pulldown: true
+    internal_filter: 100ms    # matches the Pi's GPIO.add_event_detect(bouncetime=100) exactly
+    internal_filter_mode: EDGE   # min time between accepted rising edges, not min pulse width
+    timeout: 5min
+    name: "Power Meter Instantaneous Power"
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      # pulses/min -> Watts: W = (pulses/min) * (60000 / pulses_per_kWh)
+      - lambda: 'return x * (60000.0 / ${pulses_per_kwh});'
+    total:
+      id: power_meter_pulse_total
+      name: "Power Meter Total Pulses"
+      # Left as raw pulses (no conversion filter) - single source of truth
+      # for the persisted global below.
+      on_value:
+        then:
+          - lambda: |-
+              id(power_meter_pulse_count_raw) = (uint32_t) x;
+              id(power_meter_energy_total_kwh).publish_state(x / (float) ${pulses_per_kwh});
 
-light:
-  - platform: esp32_rmt_led_strip
-    id: system_status_led             # DO NOT CHANGE
-    pin: GPIO21                       # check your board
-    rgb_order: GRB                    # check your board
-    num_leds: 1
-    chipset: ws2812                   # check your board
-    name: "onboard LED"
-    disabled_by_default: true
-    default_transition_length: 200ms
-    icon: mdi:led-outline
-    restore_mode: ALWAYS_OFF
-    effects:
-      - pulse:
-          name: "Slow Pulse"          # REQUIRED
-          update_interval: 2s         # can be adjusted
-      - pulse:
-          name: "Fast Pulse"          # REQUIRED
-          update_interval: 500ms      # can be adjusted
+  - platform: template
+    id: power_meter_energy_total_kwh
+    name: "Power Meter Total Energy"
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 3
+
+# sensor pinout:
+# white 3v3
+# gray  signal  GPIO19
+# black gnd
