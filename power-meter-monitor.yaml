@@ -39,7 +39,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    encryption:
 
 # ESP32-P4 has no WiFi radio at all - ethernet is mandatory
 # wifi:
